@@ -1,0 +1,50 @@
+{
+  "file": ".build/validation/soak-20260911-101722-1.jsonl",
+  "checks": {
+    "complete": true,
+    "no_runtime_errors": true,
+    "stable_count": true,
+    "panels_match_entities": true,
+    "render_matches_simulation": true,
+    "pause_stops_timers": true,
+    "hide_stops_timers": true,
+    "hide_removes_visible_panels": true,
+    "memory_growth_below_20_MiB": true,
+    "thirty_minutes_after_resume": true,
+    "not_paused_after_resume": true,
+    "mostly_visible_after_resume": true
+  },
+  "elapsed_seconds": 1835.0117780000437,
+  "median_memory_growth_MiB": 0.0625,
+  "peak_memory_MiB": 114.78125,
+  "peak_effects": 0,
+  "final_poll_mean_ms": 4.3418900058184295,
+  "active_seconds_after_resume": 1804.993918250082,
+  "ticks_per_second_after_resume": 59.99964814562614,
+  "polls_per_second_after_resume": 9.999479675531688
+}
+{
+  "file": ".build/validation/soak-20260911-101722-10.jsonl",
+  "checks": {
+    "complete": true,
+    "no_runtime_errors": true,
+    "stable_count": true,
+    "panels_match_entities": true,
+    "render_matches_simulation": true,
+    "pause_stops_timers": true,
+    "hide_stops_timers": true,
+    "hide_removes_visible_panels": true,
+    "memory_growth_below_20_MiB": true,
+    "thirty_minutes_after_resume": true,
+    "not_paused_after_resume": true,
+    "mostly_visible_after_resume": true
+  },
+  "elapsed_seconds": 1835.0313280832488,
+  "median_memory_growth_MiB": 0.015625,
+  "peak_memory_MiB": 117.171875,
+  "peak_effects": 1,
+  "final_poll_mean_ms": 5.83968307279265,
+  "active_seconds_after_resume": 1804.9979420416057,
+  "ticks_per_second_after_resume": 59.98067780484176,
+  "polls_per_second_after_resume": 9.99945738419239
+}
