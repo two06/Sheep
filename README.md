@@ -16,7 +16,7 @@ The built app is `dist/Sheep.app`. Double-click it, or:
 open dist/Sheep.app
 ```
 
-Use the 🐑 menu to add/remove sheep, pause/resume, hide/show, choose size, change Launch at Login, or quit. Drag a sheep by its visible pixels; release while moving to toss it. Right-click a sheep to remove it. Temporary flowers, bath effects, and the black-sheep partner don't increase your saved sheep count.
+Use the 🐑 menu to add/remove sheep, pause/resume, hide/show, choose size, change Launch at Login, or quit. Drag a sheep by its visible pixels; release while moving to toss it. Right-click a sheep for a menu that adds or removes sheep, plays one of its animations (Walk, Run, Jump, Sleep, Eat, Take a Bath, Boing, Pick a Flower) or a random Surprise Me, and mirrors the pause/resume, hide, and size controls. Temporary flowers, bath effects, and the black-sheep partner don't increase your saved sheep count.
 
 Defaults are one sheep, original 40 × 40 point size, animation enabled, and Launch at Login disabled. Count and size persist; animation states start fresh. You can remove the last sheep for the current session and keep the menu item. Launching or reopening Sheep restores at least one sheep; reopening also shows and resumes a hidden or paused flock. The app limits the chosen count to 100.
 

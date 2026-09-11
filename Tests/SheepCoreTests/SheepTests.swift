@@ -220,6 +220,10 @@ import AppKit
             expectLess(maxEffects,30)
         }
     }
+    @Test func testCuratedSpriteAnimationsExist() throws {
+        let defn = try Definition.bundled()
+        for choice in spriteAnimationChoices { expectTrue(defn.animations[choice.id] != nil) }
+    }
 }
 
 private func expectEqual<T: Equatable>(_ a: @autoclosure () throws -> T, _ b: T, sourceLocation: SourceLocation = #_sourceLocation) {

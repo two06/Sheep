@@ -1,4 +1,23 @@
 import AppKit
+
+/// A user-facing animation the sprite context menu can trigger, pairing a menu
+/// title with its definition animation id. Kept in this module (not AppDelegate)
+/// so a test can assert every id resolves in the bundled definition.
+public struct SpriteAnimationChoice {
+    public let title: String, id: Int
+    public init(title: String, id: Int) { self.title = title; self.id = id }
+}
+
+/// Curated subset of the 54 definition animations that read as deliberate
+/// behaviours when triggered on their own. Ids map to animations.xml:
+/// 1 walk, 7 run, 25 jump, 15 sleep1a, 26 eat, 21 batha, 8 boing, 27 flower.
+public let spriteAnimationChoices: [SpriteAnimationChoice] = [
+    .init(title: "Walk", id: 1),  .init(title: "Run", id: 7),
+    .init(title: "Jump", id: 25), .init(title: "Sleep", id: 15),
+    .init(title: "Eat", id: 26),  .init(title: "Take a Bath", id: 21),
+    .init(title: "Boing", id: 8), .init(title: "Pick a Flower", id: 27),
+]
+
 public final class SpritePanel: NSPanel {
     // AppKit otherwise snaps partially offscreen panels below the menu bar. That
     // silently separates rendered position from the simulation's supporting ledge.
@@ -27,7 +46,9 @@ public final class SpriteView: NSView {
     public private(set) var dragging = false
     public var onDrag: ((NSPoint, Bool) -> Void)?
     public var onRelease: ((NSPoint) -> Void)?
-    public var onRemove: (() -> Void)?
+    /// Supplies the right-click menu for this sprite. The owner builds it fresh on
+    /// each click so it can reflect live state and target the specific sheep.
+    public var contextMenuProvider: (() -> NSMenu)?
     private var lastPoint = NSPoint.zero
     private var lastTime: TimeInterval = 0
     private var velocity = NSPoint.zero
@@ -64,8 +85,7 @@ public final class SpriteView: NSView {
         onRelease?(event.timestamp-lastTime > 0.12 ? .zero : velocity)
     }
     public override func rightMouseDown(with event: NSEvent) {
-        let menu = NSMenu(); let item = menu.addItem(withTitle: "Remove Sheep", action: #selector(removeSheep), keyEquivalent: "")
-        item.target = self; NSMenu.popUpContextMenu(menu, with: event, for: self)
+        guard let menu = contextMenuProvider?() else { return }
+        NSMenu.popUpContextMenu(menu, with: event, for: self)
     }
-    @objc private func removeSheep() { onRemove?() }
 }
