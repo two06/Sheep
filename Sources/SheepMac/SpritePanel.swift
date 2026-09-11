@@ -28,6 +28,7 @@ public final class SpriteView: NSView {
     public var onDrag: ((NSPoint, Bool) -> Void)?
     public var onRelease: ((NSPoint) -> Void)?
     public var onRemove: (() -> Void)?
+    public var onAdd: (() -> Void)?
     private var lastPoint = NSPoint.zero
     private var lastTime: TimeInterval = 0
     private var velocity = NSPoint.zero
@@ -64,8 +65,12 @@ public final class SpriteView: NSView {
         onRelease?(event.timestamp-lastTime > 0.12 ? .zero : velocity)
     }
     public override func rightMouseDown(with event: NSEvent) {
-        let menu = NSMenu(); let item = menu.addItem(withTitle: "Remove Sheep", action: #selector(removeSheep), keyEquivalent: "")
-        item.target = self; NSMenu.popUpContextMenu(menu, with: event, for: self)
+        let menu = NSMenu()
+        for (title, action) in [("Add Sheep", #selector(addSheep)), ("Remove Sheep", #selector(removeSheep))] {
+            menu.addItem(withTitle: title, action: action, keyEquivalent: "").target = self
+        }
+        NSMenu.popUpContextMenu(menu, with: event, for: self)
     }
+    @objc private func addSheep() { onAdd?() }
     @objc private func removeSheep() { onRemove?() }
 }
