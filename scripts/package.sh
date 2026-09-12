@@ -7,6 +7,7 @@ if [[ "$configuration" != release && "$configuration" != debug ]]; then print -u
 if [[ "$product" != Sheep && "$product" != SheepProbe ]]; then print -u2 "Use Sheep or SheepProbe"; exit 2; fi
 swift build -c "$configuration" --product "$product" --arch arm64
 binary_dir=".build/arm64-apple-macosx/$configuration"
+swiftc -O -o .build/make-icon scripts/make-icon.swift
 mkdir -p dist
 destination="$PWD/dist/$product.app"
 staging_dir="$(mktemp -d "$PWD/dist/.package.XXXXXX")"
@@ -24,6 +25,9 @@ mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
 cp "$binary_dir/$product" "$app/Contents/MacOS/$product"
 cp Sources/SheepCore/Resources/animations.xml "$app/Contents/Resources/animations.xml"
 cp Vendor/NOTICE.md "$app/Contents/Resources/NOTICE.md"
+# The app icon is the definition's own embedded eSheep icon, so no separate artwork is checked in.
+.build/make-icon Sources/SheepCore/Resources/animations.xml "$staging_dir/AppIcon.iconset"
+iconutil --convert icns --output "$app/Contents/Resources/AppIcon.icns" "$staging_dir/AppIcon.iconset"
 cat > "$app/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -32,6 +36,7 @@ cat > "$app/Contents/Info.plist" <<PLIST
 <key>CFBundleIdentifier</key><string>local.james.$product</string>
 <key>CFBundleName</key><string>$product</string>
 <key>CFBundleDisplayName</key><string>$product</string>
+<key>CFBundleIconFile</key><string>AppIcon</string>
 <key>CFBundlePackageType</key><string>APPL</string>
 <key>CFBundleShortVersionString</key><string>1.0</string>
 <key>CFBundleVersion</key><string>1</string>

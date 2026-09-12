@@ -16,7 +16,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var distributedObservers: [NSObjectProtocol] = []
     private let preferences = UserDefaults.standard
     private lazy var flockPreferences = FlockPreferences(defaults: preferences)
-    private var pauseItem: NSMenuItem!, hideItem: NSMenuItem!, loginItem: NSMenuItem!
+    private var pauseItem: NSMenuItem!, hideItem: NSMenuItem!, loginItem: NSMenuItem!, countItem: NSMenuItem!, iconMenu: NSMenu!
+    private lazy var statusGlyph: NSImage? = (try? StatusGlyph.bundled())?.image(pointSize: 18)
     private var errorMessage: String?
     private var started = 0.0
     private var soakPhase = 0
@@ -64,16 +65,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
     private func buildMenu() {
         status = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-        status.button?.title = soakCount.map { "🐑 \($0) test" } ?? "🐑"; status.button?.toolTip = "Sheep"
+        status.button?.toolTip = "Sheep"; applyStatusIcon()
         let menu = NSMenu(); menu.delegate = self
         func item(_ title: String, _ action: Selector) -> NSMenuItem { let i = menu.addItem(withTitle: title,action: action,keyEquivalent: ""); i.target = self; return i }
+        countItem = menu.addItem(withTitle: "1 sheep",action: nil,keyEquivalent: "")
         _ = item("Add Sheep",#selector(addSheep)); _ = item("Remove Sheep",#selector(removeSheep)); menu.addItem(.separator())
         pauseItem = item("Pause",#selector(togglePause)); hideItem = item("Hide",#selector(toggleHidden))
         let size = menu.addItem(withTitle: "Size",action: nil,keyEquivalent: ""); let sizes = NSMenu()
         for (title,scale) in [("Original (40 pt)",1.0),("Large (60 pt)",1.5),("Double (80 pt)",2.0)] {
             let i = sizes.addItem(withTitle: title,action: #selector(setSize(_:)),keyEquivalent: ""); i.target = self; i.representedObject = scale
         }
-        size.submenu = sizes; menu.addItem(.separator())
+        size.submenu = sizes
+        let icon = menu.addItem(withTitle: "Menu Bar Icon",action: nil,keyEquivalent: ""); iconMenu = NSMenu()
+        for style in StatusIconStyle.allCases {
+            let i = iconMenu.addItem(withTitle: style.title,action: #selector(setStatusIcon(_:)),keyEquivalent: ""); i.target = self; i.representedObject = style.rawValue
+        }
+        icon.submenu = iconMenu; menu.addItem(.separator())
         loginItem = item("Launch at Login",#selector(toggleLogin)); _ = item("About Sheep",#selector(about))
         #if DEBUG
         let inspector = menu.addItem(withTitle: "Inspect Animation",action: nil,keyEquivalent: "")
@@ -92,6 +99,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         if let size = menu.items.first(where: { $0.title == "Size" })?.submenu {
             for item in size.items { item.state = (item.representedObject as? Double) == simulation.scale ? .on : .off }
         }
+        countItem.title = simulation.count == 1 ? "1 sheep" : "\(simulation.count) sheep"
+        for item in iconMenu.items { item.state = (item.representedObject as? String) == flockPreferences.statusIconStyle.rawValue ? .on : .off }
     }
     private func addOne() throws { try simulation.add(seed: UInt64.random(in: 0...UInt64.max)); persist() }
     private func persist() { guard soakCount == nil && !CommandLine.arguments.contains("--fixture-window") else { return }; flockPreferences.save(count: simulation.count, scale: simulation.scale) }
@@ -101,6 +110,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     @objc private func togglePause() { isPaused.toggle(); restartTimers() }
     @objc private func toggleHidden() { isHidden.toggle(); restartTimers(); render() }
     @objc private func setSize(_ sender: NSMenuItem) { attempt { try simulation.setScale(sender.representedObject as? Double ?? 1); persist(); render() } }
+    @objc private func setStatusIcon(_ sender: NSMenuItem) {
+        guard let style = StatusIconStyle(rawValue: sender.representedObject as? String ?? "") else { return }
+        flockPreferences.save(statusIconStyle: style); applyStatusIcon()
+    }
+    /// Soak instances keep a text label so two test flocks stay distinguishable.
+    private func applyStatusIcon() {
+        guard let button = status.button else { return }
+        if let count = soakCount { button.image = nil; button.imagePosition = .noImage; button.title = "🐑 \(count) test"; return }
+        if flockPreferences.statusIconStyle == .monochrome, let glyph = statusGlyph {
+            button.title = ""; button.image = glyph; button.imagePosition = .imageOnly
+        } else {
+            button.image = nil; button.imagePosition = .noImage; button.title = "🐑"
+        }
+    }
     @objc private func toggleLogin() {
         do {
             if SMAppService.mainApp.status == .enabled { try SMAppService.mainApp.unregister() } else { try SMAppService.mainApp.register() }
@@ -175,6 +198,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             if let existing = panels[state.id] { p = existing } else {
                 p = SpritePanel(atlas: atlas); panels[state.id] = p
                 p.sprite.onRemove = { [weak self] in self?.remove(state.id) }
+                p.sprite.onAdd = { [weak self] in self?.addSheep() }
                 p.sprite.onDrag = { [weak self] delta,begin in
                     guard let self else { return }; self.attempt {
                         try self.simulation.interact(begin ? .beginDrag(state.id) : .drag(state.id,Point(x: delta.x,y: -delta.y))); self.render()

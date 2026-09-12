@@ -16,9 +16,9 @@ The built app is `dist/Sheep.app`. Double-click it, or:
 open dist/Sheep.app
 ```
 
-Use the 🐑 menu to add/remove sheep, pause/resume, hide/show, choose size, change Launch at Login, or quit. Drag a sheep by its visible pixels; release while moving to toss it. Right-click a sheep to remove it. Temporary flowers, bath effects, and the black-sheep partner don't increase your saved sheep count.
+Use the 🐑 menu to add/remove sheep, pause/resume, hide/show, choose size, change Launch at Login, or quit. The menu lists the current flock size. **Menu Bar Icon** switches the status item between the emoji and a monochrome glyph derived from the original eSheep icon; the glyph is a template image, so macOS tints it like its own status icons in light and dark menu bars. Drag a sheep by its visible pixels; release while moving to toss it. Right-click a sheep to add another or remove it. Temporary flowers, bath effects, and the black-sheep partner don't increase your saved sheep count.
 
-Defaults are one sheep, original 40 × 40 point size, animation enabled, and Launch at Login disabled. Count and size persist; animation states start fresh. You can remove the last sheep for the current session and keep the menu item. Launching or reopening Sheep restores at least one sheep; reopening also shows and resumes a hidden or paused flock. The app limits the chosen count to 100.
+Defaults are one sheep, original 40 × 40 point size, animation enabled, the emoji menu bar icon, and Launch at Login disabled. Count, size and icon style persist; animation states start fresh. You can remove the last sheep for the current session and keep the menu item. Launching or reopening Sheep restores at least one sheep; reopening also shows and resumes a hidden or paused flock. The app limits the chosen count to 100.
 
 For Launch at Login, keep the app at a stable path before enabling it (for example `~/Applications/Sheep.app`). macOS may request approval in Login Items. The menu reflects the actual ServiceManagement registration state. Moving or rebuilding an ad-hoc-signed app may require disabling and re-enabling its login registration.
 
@@ -31,7 +31,7 @@ scripts/package.sh release
 open dist/Sheep.app
 ```
 
-`package.sh` creates an arm64 app with stable bundle identifier `local.james.Sheep`, embeds the original definition/artwork and credits, and ad-hoc signs and verifies the bundle. It stages the replacement so rebuilding does not overwrite the executable of a running instance. It uses `swift`, `codesign`, and standard macOS command-line tools. Dependencies and resources are local after checkout. Build output goes under `.build/` and `dist/`.
+`package.sh` creates an arm64 app with stable bundle identifier `local.james.Sheep`, embeds the original definition/artwork and credits, renders the app icon from the definition's embedded eSheep icon with `scripts/make-icon.swift` and `iconutil`, and ad-hoc signs and verifies the bundle. It stages the replacement so rebuilding does not overwrite the executable of a running instance. It uses `swift`, `codesign`, and standard macOS command-line tools. Dependencies and resources are local after checkout. Build output goes under `.build/` and `dist/`.
 
 `test.sh` supplies Swift Testing's framework and runtime paths for the standalone command-line-tools installation; neither XCTest nor full Xcode is needed. Tests cover every bundled animation/frame/transition reference, expression conversion and repeat semantics, weighted conditions, interpolation, flipping, effect cleanup, transparent sprites, window occlusion, swept landings, moving/vanishing support, monitor geometry, and deterministic long runs. Swift's build caches must be writable.
 
@@ -53,7 +53,7 @@ The debug menu's **Inspect Animation** submenu selects any of the 54 original se
 ## Architecture
 
 - `SheepCore`: XML definition and arithmetic reader, deterministic per-sheep randomness, animation graph, spawning/effects, collisions, support tracking, and toss physics. Accepts elapsed seconds, environment snapshots, and interaction events; exposes render states and spawn/removal events.
-- `SheepMac`: cached sprites and alpha masks, nonactivating transparent `NSPanel` windows, input, AppKit/Core Graphics coordinate conversion at the boundary, visible-window enumeration, display snapshots, and resident-memory instrumentation.
+- `SheepMac`: cached sprites and alpha masks, nonactivating transparent `NSPanel` windows, input, AppKit/Core Graphics coordinate conversion at the boundary, visible-window enumeration, display snapshots, the menu bar template glyph and preference persistence, and resident-memory instrumentation.
 - `Sheep`: status menu, preferences, ServiceManagement, lifecycle notifications, independent 60 Hz simulation/input and 10 Hz shared geometry timers.
 
 The simulation uses global logical desktop points, X rightward and Y downward, with the origin at the primary display's top-left. Monitor origins may be negative. Retina scale is handled by AppKit; sprite size is specified in logical points and rendered with nearest-neighbour interpolation.
