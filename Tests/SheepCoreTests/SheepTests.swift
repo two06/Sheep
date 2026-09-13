@@ -220,6 +220,36 @@ import AppKit
             expectLess(maxEffects,30)
         }
     }
+    @MainActor @Test func testPausedSpriteRejectsDraggingButRetainsContextMenu() throws {
+        let view = SpriteView(atlas: try SpriteAtlas())
+        view.allowsDragging = false
+        var dragCalls = 0, releaseCalls = 0
+        view.onDrag = { _, _ in dragCalls += 1 }
+        view.onRelease = { _ in releaseCalls += 1 }
+        view.contextMenuProvider = {
+            let menu = NSMenu()
+            menu.addItem(withTitle: "Resume", action: nil, keyEquivalent: "")
+            return menu
+        }
+        let down = NSEvent.mouseEvent(with: .leftMouseDown, location: .zero, modifierFlags: [], timestamp: 1, windowNumber: 0, context: nil, eventNumber: 0, clickCount: 1, pressure: 1)!
+        view.mouseDown(with: down)
+        view.mouseDragged(with: down)
+        view.mouseUp(with: down)
+        expectFalse(view.dragging)
+        expectEqual(dragCalls, 0)
+        expectEqual(releaseCalls, 0)
+        expectEqual(view.contextMenuProvider?().items.first?.title, "Resume")
+        view.allowsDragging = true
+        view.mouseDown(with: down)
+        expectTrue(view.dragging)
+        expectEqual(dragCalls, 1)
+        view.mouseUp(with: down)
+        expectEqual(releaseCalls, 1)
+    }
+    @Test func testCuratedSpriteAnimationsExist() throws {
+        let defn = try Definition.bundled()
+        for choice in spriteAnimationChoices { expectTrue(defn.animations[choice.id] != nil) }
+    }
 }
 
 private func expectEqual<T: Equatable>(_ a: @autoclosure () throws -> T, _ b: T, sourceLocation: SourceLocation = #_sourceLocation) {

@@ -25,6 +25,7 @@ Record pass/fail and any reproduction steps on the final app. General positive p
 | Check | Procedure | Recorded status |
 |---|---|---|
 | Drag and toss | Drag slowly; release quickly in several directions; land on a window and Dock boundary | Dragging confirmed; live window fixture landing and support loss passed; toss automated in core |
+| Sprite context menu | Right-click a sheep: play each Animations entry and Surprise Me; use Add/Remove, Pause/Resume, Hide, Size; confirm actions affect the clicked sheep | Curated animation ids automated against the definition; live desktop result not recorded |
 | Transparent input | Click corners and holes over another app; click visible pixels; repeat after flip/resize | Alpha masks automated; individual desktop result not recorded |
 | Keyboard focus | Type continuously in an editor while sheep move; drag sheep then continue typing | Non-key/main properties verified; individual typing result not recorded |
 | Window support | Land on overlapping windows, move/resize/minimise/close support, bring another window over it | Core geometry automated; live fixture landing/move/close passed; panel-position mismatch reproduced, fixed, and confirmed by user |

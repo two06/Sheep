@@ -1,4 +1,23 @@
 import AppKit
+
+/// A user-facing animation the sprite context menu can trigger, pairing a menu
+/// title with its definition animation id. Kept in this module (not AppDelegate)
+/// so a test can assert every id resolves in the bundled definition.
+public struct SpriteAnimationChoice {
+    public let title: String, id: Int
+    public init(title: String, id: Int) { self.title = title; self.id = id }
+}
+
+/// Curated subset of the 54 definition animations that read as deliberate
+/// behaviours when triggered on their own. Ids map to animations.xml:
+/// 1 walk, 7 run, 25 jump, 15 sleep1a, 26 eat, 21 batha, 8 boing, 27 flower.
+public let spriteAnimationChoices: [SpriteAnimationChoice] = [
+    .init(title: "Walk", id: 1),  .init(title: "Run", id: 7),
+    .init(title: "Jump", id: 25), .init(title: "Sleep", id: 15),
+    .init(title: "Eat", id: 26),  .init(title: "Take a Bath", id: 21),
+    .init(title: "Boing", id: 8), .init(title: "Pick a Flower", id: 27),
+]
+
 public final class SpritePanel: NSPanel {
     // AppKit otherwise snaps partially offscreen panels below the menu bar. That
     // silently separates rendered position from the simulation's supporting ledge.
@@ -24,11 +43,13 @@ public final class SpriteView: NSView {
     public var frameIndex = 2 { didSet { needsDisplay = true } }
     public var mirrored = false { didSet { needsDisplay = true } }
     public var opacity: Double = 1 { didSet { needsDisplay = true } }
+    public var allowsDragging = true
     public private(set) var dragging = false
     public var onDrag: ((NSPoint, Bool) -> Void)?
     public var onRelease: ((NSPoint) -> Void)?
-    public var onRemove: (() -> Void)?
-    public var onAdd: (() -> Void)?
+    /// Supplies the right-click menu for this sprite. The owner builds it fresh on
+    /// each click so it can reflect live state and target the specific sheep.
+    public var contextMenuProvider: (() -> NSMenu)?
     private var lastPoint = NSPoint.zero
     private var lastTime: TimeInterval = 0
     private var velocity = NSPoint.zero
@@ -50,10 +71,12 @@ public final class SpriteView: NSView {
         c.draw(atlas.frames[frameIndex], in: bounds); c.restoreGState()
     }
     public override func mouseDown(with event: NSEvent) {
+        guard allowsDragging else { return }
         dragging = true; lastPoint = NSEvent.mouseLocation; lastTime = event.timestamp; velocity = .zero
         onDrag?(.zero, true)
     }
     public override func mouseDragged(with event: NSEvent) {
+        guard allowsDragging && dragging else { return }
         let p = NSEvent.mouseLocation, dt = max(0.001, event.timestamp - lastTime)
         let delta = NSPoint(x: p.x-lastPoint.x, y: p.y-lastPoint.y)
         velocity = NSPoint(x: delta.x/dt, y: delta.y/dt)
@@ -61,16 +84,12 @@ public final class SpriteView: NSView {
         lastPoint = p; lastTime = event.timestamp
     }
     public override func mouseUp(with event: NSEvent) {
+        guard dragging else { return }
         dragging = false
         onRelease?(event.timestamp-lastTime > 0.12 ? .zero : velocity)
     }
     public override func rightMouseDown(with event: NSEvent) {
-        let menu = NSMenu()
-        for (title, action) in [("Add Sheep", #selector(addSheep)), ("Remove Sheep", #selector(removeSheep))] {
-            menu.addItem(withTitle: title, action: action, keyEquivalent: "").target = self
-        }
+        guard let menu = contextMenuProvider?() else { return }
         NSMenu.popUpContextMenu(menu, with: event, for: self)
     }
-    @objc private func addSheep() { onAdd?() }
-    @objc private func removeSheep() { onRemove?() }
 }

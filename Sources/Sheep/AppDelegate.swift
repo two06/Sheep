@@ -18,6 +18,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private lazy var flockPreferences = FlockPreferences(defaults: preferences)
     private var pauseItem: NSMenuItem!, hideItem: NSMenuItem!, loginItem: NSMenuItem!, countItem: NSMenuItem!, iconMenu: NSMenu!
     private lazy var statusGlyph: NSImage? = (try? StatusGlyph.bundled())?.image(pointSize: 18)
+    private var contextSheepID: UInt64?
     private var errorMessage: String?
     private var started = 0.0
     private var soakPhase = 0
@@ -71,11 +72,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         countItem = menu.addItem(withTitle: "1 sheep",action: nil,keyEquivalent: "")
         _ = item("Add Sheep",#selector(addSheep)); _ = item("Remove Sheep",#selector(removeSheep)); menu.addItem(.separator())
         pauseItem = item("Pause",#selector(togglePause)); hideItem = item("Hide",#selector(toggleHidden))
-        let size = menu.addItem(withTitle: "Size",action: nil,keyEquivalent: ""); let sizes = NSMenu()
-        for (title,scale) in [("Original (40 pt)",1.0),("Large (60 pt)",1.5),("Double (80 pt)",2.0)] {
-            let i = sizes.addItem(withTitle: title,action: #selector(setSize(_:)),keyEquivalent: ""); i.target = self; i.representedObject = scale
-        }
-        size.submenu = sizes
+        let size = menu.addItem(withTitle: "Size",action: nil,keyEquivalent: "")
+        size.submenu = sizeSubmenu()
         let icon = menu.addItem(withTitle: "Menu Bar Icon",action: nil,keyEquivalent: ""); iconMenu = NSMenu()
         for style in StatusIconStyle.allCases {
             let i = iconMenu.addItem(withTitle: style.title,action: #selector(setStatusIcon(_:)),keyEquivalent: ""); i.target = self; i.representedObject = style.rawValue
@@ -110,6 +108,45 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     @objc private func togglePause() { isPaused.toggle(); restartTimers() }
     @objc private func toggleHidden() { isHidden.toggle(); restartTimers(); render() }
     @objc private func setSize(_ sender: NSMenuItem) { attempt { try simulation.setScale(sender.representedObject as? Double ?? 1); persist(); render() } }
+    /// The Size submenu, shared by the status-bar and sprite context menus. Items
+    /// checkmark the current scale; the status-bar copy is also refreshed in menuWillOpen.
+    private func sizeSubmenu() -> NSMenu {
+        let sizes = NSMenu()
+        for (title,scale) in [("Original (40 pt)",1.0),("Large (60 pt)",1.5),("Double (80 pt)",2.0)] {
+            let i = sizes.addItem(withTitle: title,action: #selector(setSize(_:)),keyEquivalent: ""); i.target = self; i.representedObject = scale
+            i.state = scale == simulation.scale ? .on : .off
+        }
+        return sizes
+    }
+    /// Builds the per-sheep right-click menu. Rebuilt on each click so labels and
+    /// checkmarks reflect live state; the clicked sheep is captured in contextSheepID.
+    /// The sprite menu has no NSMenuDelegate, so state is set here at build time.
+    private func spriteContextMenu(for id: UInt64) -> NSMenu {
+        contextSheepID = id
+        let menu = NSMenu()
+        func add(_ title: String, _ action: Selector) -> NSMenuItem {
+            let i = menu.addItem(withTitle: title,action: action,keyEquivalent: ""); i.target = self; return i
+        }
+        _ = add("Add Sheep",#selector(addSheep)); _ = add("Remove Sheep",#selector(removeThisSheep)); menu.addItem(.separator())
+        let animations = NSMenu()
+        for choice in spriteAnimationChoices {
+            let i = animations.addItem(withTitle: choice.title,action: #selector(playSpriteAnimation(_:)),keyEquivalent: ""); i.target = self; i.tag = choice.id
+        }
+        menu.addItem(withTitle: "Animations",action: nil,keyEquivalent: "").submenu = animations
+        _ = add("Surprise Me",#selector(surpriseSprite)); menu.addItem(.separator())
+        _ = add(isPaused ? "Resume" : "Pause",#selector(togglePause)); _ = add(isHidden ? "Show" : "Hide",#selector(toggleHidden))
+        menu.addItem(withTitle: "Size",action: nil,keyEquivalent: "").submenu = sizeSubmenu()
+        return menu
+    }
+    @objc private func removeThisSheep() { if let id = contextSheepID { remove(id) } }
+    @objc private func playSpriteAnimation(_ sender: NSMenuItem) {
+        guard let id = contextSheepID else { return }
+        attempt { try simulation.selectAnimation(sender.tag,for: id); render() }
+    }
+    @objc private func surpriseSprite() {
+        guard let id = contextSheepID, let pick = spriteAnimationChoices.randomElement() else { return }
+        attempt { try simulation.selectAnimation(pick.id,for: id); render() }
+    }
     @objc private func setStatusIcon(_ sender: NSMenuItem) {
         guard let style = StatusIconStyle(rawValue: sender.representedObject as? String ?? "") else { return }
         flockPreferences.save(statusIconStyle: style); applyStatusIcon()
@@ -172,8 +209,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private func restartTimers() {
         animationTimer?.invalidate(); geometryTimer?.invalidate(); animationTimer = nil; geometryTimer = nil
         simulation.paused = isSuspended
-        panels.values.forEach { $0.updateMouseAcceptance(enabled: !isSuspended) }
-        guard !isSuspended else { return }
+        render()
+        guard !isHidden && !sleeping && !sessionInactive else { return }
+        if isPaused {
+            animationTimer = Timer(timeInterval: 1.0/60,repeats: true) { [weak self] _ in self?.render() }
+            animationTimer?.tolerance = 0.002
+            RunLoop.main.add(animationTimer!,forMode: .common)
+            return
+        }
         refreshGeometry(); lastTime = ProcessInfo.processInfo.systemUptime
         animationTimer = Timer(timeInterval: 1.0/60,repeats: true) { [weak self] _ in self?.tick() }
         geometryTimer = Timer(timeInterval: 0.1,repeats: true) { [weak self] _ in self?.refreshGeometry() }
@@ -197,8 +240,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             let p: SpritePanel
             if let existing = panels[state.id] { p = existing } else {
                 p = SpritePanel(atlas: atlas); panels[state.id] = p
-                p.sprite.onRemove = { [weak self] in self?.remove(state.id) }
-                p.sprite.onAdd = { [weak self] in self?.addSheep() }
+                p.sprite.contextMenuProvider = { [weak self] in self?.spriteContextMenu(for: state.id) ?? NSMenu() }
                 p.sprite.onDrag = { [weak self] delta,begin in
                     guard let self else { return }; self.attempt {
                         try self.simulation.interact(begin ? .beginDrag(state.id) : .drag(state.id,Point(x: delta.x,y: -delta.y))); self.render()
@@ -215,7 +257,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             let hiddenByFullScreen = snapshot.environment.displays.contains { d in snapshot.fullScreenDisplays.contains(d.id) && d.frame.intersects(Rect(x: state.position.x,y: state.position.y,width: state.width,height: state.height)) }
             let visible = !isHidden && !sleeping && !sessionInactive && !hiddenByFullScreen
             if visible { if !p.isVisible { p.orderFrontRegardless() } } else if p.isVisible { p.orderOut(nil) }
-            p.updateMouseAcceptance(enabled: visible && !isSuspended && !state.isEffect)
+            p.sprite.allowsDragging = !isSuspended
+            p.updateMouseAcceptance(enabled: visible && !state.isEffect)
         }
         status.button?.toolTip = "\(simulation.count) sheep"
     }
