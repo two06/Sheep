@@ -4,7 +4,9 @@ An offline AppKit menu-bar home for the classic eSheep. Built for Apple Silicon,
 
 ## Download
 
-Download [Sheep.zip](https://github.com/two06/Sheep/raw/refs/heads/main/Sheep.zip), unzip it, and move Sheep.app to Applications. This build requires Apple Silicon (M1 or newer), targets macOS 13+, and has been tested on macOS 26.5.2.
+For the latest automated build, open [Build Sheep in Actions](https://github.com/two06/Sheep/actions/workflows/build.yml), select a successful `main` run, and download **Sheep-macOS-arm64** from **Artifacts** (GitHub sign-in required). Unzip the artifact, then its `Sheep.zip`, and move Sheep.app to Applications. Artifacts expire after 30 days.
+
+The [checked-in Sheep.zip](https://github.com/two06/Sheep/raw/refs/heads/main/Sheep.zip) is an older snapshot and is not updated by the workflow. Builds require Apple Silicon (M1 or newer), target macOS 13+, and have been tested on macOS 26.5.2.
 
 The app is ad-hoc signed, not Apple-notarised. If macOS blocks opening it, follow [Apple's instructions](https://support.apple.com/en-gb/102445): attempt to open it, then use System Settings → Privacy & Security → Open Anyway. Controls appear in the menu bar rather than a normal app window.
 
@@ -23,6 +25,8 @@ Defaults are one sheep, original 40 × 40 point size, animation enabled, the emo
 For Launch at Login, keep the app at a stable path before enabling it (for example `~/Applications/Sheep.app`). macOS may request approval in Login Items. The menu reflects the actual ServiceManagement registration state. Moving or rebuilding an ad-hoc-signed app may require disabling and re-enabling its login registration.
 
 ## Build and test
+
+[`.github/workflows/build.yml`](.github/workflows/build.yml) tests and packages the app on GitHub's `macos-26` Apple Silicon runner for pull requests and pushes to `main`. To build manually, choose **Actions → Build Sheep → Run workflow** after the workflow is on the default branch. It verifies the packaged resources and signature, creates a ZIP with macOS bundle metadata preserved, and uploads it as an artifact. No signing secrets are required; builds remain ad-hoc signed and unnotarised. The workflow does not publish releases or commit generated binaries.
 
 ```sh
 swift build

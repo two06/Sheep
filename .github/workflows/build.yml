@@ -1,0 +1,52 @@
+name: Build Sheep
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sheep-build-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Test and package Apple Silicon app
+    runs-on: macos-26
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Show toolchain
+        run: |
+          uname -m
+          xcode-select -p
+          swift --version
+
+      - name: Run tests
+        run: scripts/test.sh
+
+      - name: Package release app
+        run: scripts/package.sh release
+
+      - name: Verify and archive app
+        run: |
+          dist/Sheep.app/Contents/MacOS/Sheep --self-check
+          codesign --verify --strict dist/Sheep.app
+          ditto -c -k --sequesterRsrc --keepParent dist/Sheep.app dist/Sheep.zip
+          unzip -t dist/Sheep.zip
+
+      - name: Upload app
+        uses: actions/upload-artifact@v4
+        with:
+          name: Sheep-macOS-arm64
+          path: dist/Sheep.zip
+          if-no-files-found: error
+          retention-days: 30
+          compression-level: 0
