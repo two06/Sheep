@@ -6,9 +6,18 @@ An offline AppKit menu-bar home for the classic eSheep. Built for Apple Silicon,
 
 For the latest automated build, open [Build Sheep in Actions](https://github.com/two06/Sheep/actions/workflows/build.yml), select a successful `main` run, and download **Sheep-macOS-arm64** from **Artifacts** (GitHub sign-in required). Unzip the artifact, then its `Sheep.zip`, and move Sheep.app to Applications. Artifacts expire after 30 days.
 
-The [checked-in Sheep.zip](https://github.com/two06/Sheep/raw/refs/heads/main/Sheep.zip) is an older snapshot and is not updated by the workflow. Builds require Apple Silicon (M1 or newer), target macOS 13+, and have been tested on macOS 26.5.2.
+Builds require Apple Silicon (M1 or newer), target macOS 13+, and have been tested on macOS 26.5.2.
 
-The app is ad-hoc signed, not Apple-notarised. If macOS blocks opening it, follow [Apple's instructions](https://support.apple.com/en-gb/102445): attempt to open it, then use System Settings → Privacy & Security → Open Anyway. Controls appear in the menu bar rather than a normal app window.
+The app is ad-hoc signed, not Apple-notarised, so macOS may block its first launch. To allow it to open:
+
+1. Move the extracted **Sheep.app** into **Applications** and try opening it.
+2. Open **System Settings → Privacy & Security**.
+3. Scroll down to the message about Sheep and click **Open Anyway**.
+4. Confirm **Open** in the prompt, authenticating if asked.
+
+macOS saves this exception so you can open the app normally next time. See [Apple's instructions](https://support.apple.com/en-gb/102445). If **Open Anyway** is missing or the alert says the app is **damaged**, report the exact message for troubleshooting.
+
+Controls appear in the menu bar rather than a normal app window.
 
 ## Run
 
